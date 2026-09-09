@@ -1,10 +1,14 @@
 # STM32F103 Bare-Metal - Bài tập 01 đến 04
 
-Họ và tên: **Nguyễn Khắc Nhật Huy**
+## Thông tin nhóm
 
-Mã sinh viên: **Điền mã sinh viên**
+**Lớp: 02**
 
-Lớp: **Điền tên lớp**
+| STT | Họ và tên | Mã sinh viên |
+|---:|---|---|
+| 1 | Nguyễn Khắc Nhật Huy | B23DCDT123 |
+| 2 | Nguyễn Trung Đán | B23DCDT043 |
+| 3 | Hoàng Hải Đăng | B23DCDT303 |
 
 ## Giới thiệu
 
@@ -123,11 +127,7 @@ SWD/JTAG để sử dụng đủ PA13, PA14 và PA15 theo yêu cầu đề bài.
 
 ## Video demo
 
-- Sau khi quay, tải `demo-bai-01.mp4` vào thư mục `bai-01/video-demo/`.
-- Sau khi quay, tải `demo-bai-02.mp4` vào thư mục `bai-02/video-demo/`.
-- [Thư mục video demo bài 03](./bai-03/video-demo/): tải video
-  `demo-bai-03.mp4` hoặc đặt liên kết công khai trong phần mô tả commit.
-- [Thư mục video demo bài 04](./bai-04/video-demo/): tải video
-  `demo-bai-04.mp4` hoặc đặt liên kết công khai trong phần mô tả commit.
-
-Trước khi nộp, thay thông tin sinh viên và tải video vào đúng thư mục tương ứng.
+- [Video demo bài 01](./bai-01/video-demo/demo-bai-01.mp4)
+- [Video demo bài 02](./bai-02/video-demo/demo-bai-02.mp4)
+- [Video demo bài 03](./bai-03/video-demo/demo-bai-03.mp4)
+- [Video demo bài 04](./bai-04/video-demo/demo-bai-04.mp4)
