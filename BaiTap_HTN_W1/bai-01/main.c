@@ -1,6 +1,5 @@
 #include <stdint.h>
 
-/* STM32F103 register addresses. */
 #define RCC_APB2ENR   (*(volatile uint32_t *)0x40021018u)
 #define GPIOC_CRH     (*(volatile uint32_t *)0x40011004u)
 #define GPIOC_BSRR    (*(volatile uint32_t *)0x40011010u)
@@ -18,7 +17,7 @@
 
 static void systick_init(void)
 {
-    /* The reset clock is HSI = 8 MHz, so 8000 ticks equal 1 ms. */
+    /* Clock mac dinh HSI = 8 MHz, 8000 tick tuong ung 1 ms. */
     SYST_RVR = 8000u - 1u;
     SYST_CVR = 0u;
     SYST_CSR = (1u << 2) | (1u << 0);
@@ -28,14 +27,14 @@ static void delay_ms(uint32_t milliseconds)
 {
     while (milliseconds-- != 0u) {
         while ((SYST_CSR & (1u << 16)) == 0u) {
-            /* Wait for the SysTick COUNTFLAG. */
+            /* Cho co COUNTFLAG. */
         }
     }
 }
 
 static void led_write(uint32_t on)
 {
-    /* The onboard PC13 LED is active low. */
+    /* LED PC13 tren Blue Pill sang o muc logic 0. */
     if (on != 0u) {
         GPIOC_BSRR = 1u << (LED_PIN + 16u);
     } else {
@@ -47,7 +46,7 @@ int main(void)
 {
     RCC_APB2ENR |= RCC_IOPCEN;
 
-    /* PC13: 2 MHz general-purpose push-pull output (CNF=00, MODE=10). */
+    /* PC13: output push-pull 2 MHz. */
     GPIOC_CRH = (GPIOC_CRH & ~(0xFu << 20)) | (0x2u << 20);
 
     uint32_t led_on = 0u;
