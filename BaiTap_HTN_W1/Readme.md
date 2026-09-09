@@ -27,14 +27,12 @@ bare-metal-week-01/
 │   ├── startup.s
 │   ├── linker.ld
 │   ├── Makefile
-│   ├── README.md
 │   └── video-demo/
 ├── bai-04/
 │   ├── main.c
 │   ├── startup.s
 │   ├── linker.ld
 │   ├── Makefile
-│   ├── README.md
 │   └── video-demo/
 └── SUBMISSION_CHECKLIST.md
 ```
@@ -65,6 +63,23 @@ make
 
 Mỗi project tạo tệp `.elf`, `.bin` và `.map` trong thư mục `build/`.
 
+## Bài 03 - Đọc 8 input, đảo bit và xuất ra 8 LED
+
+- PA0-PA7: input pull-up nội; mỗi nút nhấn nối giữa chân PA tương ứng và GND.
+- PA8-PA15: output; mỗi chân nối anode LED qua điện trở 220-330 ohm,
+  cathode nối GND.
+- Quan hệ input/output: PA0→PA8, PA1→PA9, ..., PA7→PA15.
+- Nhấn nút sẽ làm LED tương ứng sáng; các kênh hoạt động độc lập.
+- Firmware tắt SWD/JTAG để dùng PA13-PA15 làm GPIO. Sau khi nạp,
+  ngắt SWDIO/SWCLK trước khi kiểm tra các LED này.
+
+## Bài 04 - Nút nhấn đảo trạng thái LED
+
+- PA0: input pull-up nội; nút nhấn nối giữa PA0 và GND.
+- PC13: LED tích hợp trên Blue Pill, hoạt động mức thấp.
+- LED chỉ đảo trạng thái một lần sau mỗi chu trình nhấn-rồi-nhả.
+- Chương trình dùng SysTick 1 ms và chống dội phím 20 ms.
+
 ## Nạp chương trình
 
 ```bash
@@ -79,7 +94,9 @@ SWD/JTAG để sử dụng đủ PA13, PA14 và PA15 theo yêu cầu đề bài.
 
 ## Video demo
 
-- [Thư mục video demo bài 03](./bai-03/video-demo/)
-- [Thư mục video demo bài 04](./bai-04/video-demo/)
+- [Thư mục video demo bài 03](./bai-03/video-demo/): tải video
+  `demo-bai-03.mp4` hoặc đặt liên kết công khai trong phần mô tả commit.
+- [Thư mục video demo bài 04](./bai-04/video-demo/): tải video
+  `demo-bai-04.mp4` hoặc đặt liên kết công khai trong phần mô tả commit.
 
 Trước khi nộp, thay thông tin sinh viên và tải video vào đúng thư mục tương ứng.
