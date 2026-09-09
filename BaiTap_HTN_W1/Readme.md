@@ -1,4 +1,4 @@
-# STM32F103 Bare-Metal - Bài tập 03 và 04
+# STM32F103 Bare-Metal - Bài tập 01 đến 04
 
 Họ và tên: **Nguyễn Khắc Nhật Huy**
 
@@ -22,6 +22,16 @@ SRAM. Linker script đã được cấu hình theo đúng dung lượng này.
 
 ```text
 bare-metal-week-01/
+├── bai-01/
+│   ├── main.c
+│   ├── startup.s
+│   ├── linker.ld
+│   └── Makefile
+├── bai-02/
+│   ├── main.c
+│   ├── startup.s
+│   ├── linker.ld
+│   └── Makefile
 ├── bai-03/
 │   ├── main.c
 │   ├── startup.s
@@ -44,23 +54,43 @@ bare-metal-week-01/
 
 ## Build
 
-Bài 03:
+Chọn thư mục bài cần build, ví dụ:
 
 ```bash
-cd bai-03
+cd bai-01
 make clean
 make
 ```
 
-Bài 04:
+Bài 01 có thể thay đổi thời gian giữa hai lần đảo LED:
 
 ```bash
-cd bai-04
-make clean
-make
+make clean && make BLINK_INTERVAL_MS=500
+```
+
+Bài 02 có thể thay đổi thời gian dừng ở mỗi LED:
+
+```bash
+make clean && make LED_STEP_MS=250
 ```
 
 Mỗi project tạo tệp `.elf`, `.bin` và `.map` trong thư mục `build/`.
+
+## Bài 01 - LED PC13 nhấp nháy
+
+- PC13 được cấu hình output push-pull 2 MHz.
+- LED tích hợp trên Blue Pill hoạt động mức thấp.
+- LED đảo trạng thái mặc định mỗi 1000 ms.
+- Đổi tham số `BLINK_INTERVAL_MS` khi build để thay đổi tốc độ.
+
+## Bài 02 - LED chạy hai chiều
+
+- PA0-PA7 được cấu hình output push-pull 2 MHz.
+- Nối mỗi chân PA0-PA7 tới anode của một LED qua điện trở
+  220-330 ohm; cathode nối GND.
+- Bố trí PA0 ở bên trái và PA7 ở bên phải.
+- Chương trình chỉ bật một LED, chạy PA0→PA7→PA0 và lặp lại.
+- Đổi tham số `LED_STEP_MS` khi build để thay tốc độ LED chạy.
 
 ## Bài 03 - Đọc 8 input, đảo bit và xuất ra 8 LED
 
@@ -83,7 +113,7 @@ Mỗi project tạo tệp `.elf`, `.bin` và `.map` trong thư mục `build/`.
 
 ```bash
 st-info --probe
-cd bai-03   # hoặc bai-04
+cd bai-01   # hoặc bai-02, bai-03, bai-04
 make flash
 ```
 
@@ -93,6 +123,8 @@ SWD/JTAG để sử dụng đủ PA13, PA14 và PA15 theo yêu cầu đề bài.
 
 ## Video demo
 
+- Sau khi quay, tải `demo-bai-01.mp4` vào thư mục `bai-01/video-demo/`.
+- Sau khi quay, tải `demo-bai-02.mp4` vào thư mục `bai-02/video-demo/`.
 - [Thư mục video demo bài 03](./bai-03/video-demo/): tải video
   `demo-bai-03.mp4` hoặc đặt liên kết công khai trong phần mô tả commit.
 - [Thư mục video demo bài 04](./bai-04/video-demo/): tải video
