@@ -34,7 +34,6 @@ bare-metal-week-01/
 │   ├── linker.ld
 │   ├── Makefile
 │   └── video-demo/
-└── SUBMISSION_CHECKLIST.md
 ```
 
 ## Công cụ đã sử dụng
