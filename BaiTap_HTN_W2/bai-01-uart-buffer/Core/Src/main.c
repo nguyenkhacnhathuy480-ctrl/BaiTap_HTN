@@ -54,7 +54,7 @@ static void UART_Write(const char *text)
 
 int main(void)
 {
-    static const char class_and_group[] = "0201: ";
+    static const char class_and_group[] = "ELE141502: ";
     char buffer[RX_BUFFER_SIZE];
     uint16_t length = 0U;
     uint8_t received;

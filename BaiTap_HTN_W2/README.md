@@ -79,11 +79,11 @@ Terminal đặt `115200`, `8N1`, không flow control. Chương trình nhận t�
 byte vào bộ đệm. Khi nhận `!`, board phản hồi:
 
 ```text
-0201: <noi dung da nhan>\n\r
+ELE141502: <noi dung da nhan>\n\r
 ```
 
-Trong đó `02` là mã lớp và `01` là mã nhóm. Ví dụ gửi `Hello!` thì nhận
-`0201: Hello`.
+Trong đó `ELE1415` là mã lớp và `02` là mã nhóm. Ví dụ gửi `Hello!` thì
+nhận `ELE141502: Hello`.
 
 ## Bài 02 - Ba LED dùng ngắt SysTick
 
