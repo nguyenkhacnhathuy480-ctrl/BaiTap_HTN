@@ -1,0 +1,12 @@
+# Không đưa kết quả biên dịch lên GitHub
+**/build/
+
+# File firmware và báo cáo linker
+*.elf
+*.hex
+*.bin
+*.map
+
+# File tạm của trình soạn thảo
+*~
+*.swp
