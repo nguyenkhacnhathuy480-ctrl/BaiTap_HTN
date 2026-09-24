@@ -2,7 +2,6 @@ PROJECT_ROOT := ..
 COMMON_DIR := $(PROJECT_ROOT)/Common
 DRIVERS_DIR := $(PROJECT_ROOT)/Drivers
 CMSIS_DEVICE_DIR := $(DRIVERS_DIR)/CMSIS/Device/ST/STM32F1xx
-HAL_DIR := $(DRIVERS_DIR)/STM32F1xx_HAL_Driver
 
 BUILD_DIR := build
 PREFIX := arm-none-eabi-
@@ -12,12 +11,11 @@ OBJCOPY := $(PREFIX)objcopy
 SIZE := $(PREFIX)size
 
 CPU_FLAGS := -mcpu=cortex-m3 -mthumb
-DEFINES := -DSTM32F103x6 -DUSE_HAL_DRIVER
+DEFINES := -DSTM32F103x6
 INCLUDES := \
 	-I$(COMMON_DIR)/Inc \
 	-I$(DRIVERS_DIR)/CMSIS/Include \
-	-I$(CMSIS_DEVICE_DIR)/Include \
-	-I$(HAL_DIR)/Inc
+	-I$(CMSIS_DEVICE_DIR)/Include
 
 CFLAGS := $(CPU_FLAGS) $(DEFINES) $(INCLUDES) \
 	-std=c11 -O2 -g3 -Wall -Wextra -Werror \
@@ -30,21 +28,7 @@ LDFLAGS := $(CPU_FLAGS) -T$(LDSCRIPT) --specs=nano.specs --specs=nosys.specs \
 
 COMMON_SOURCES := \
 	$(COMMON_DIR)/Src/platform.c \
-	$(CMSIS_DEVICE_DIR)/Source/Templates/system_stm32f1xx.c \
-	$(HAL_DIR)/Src/stm32f1xx_hal.c \
-	$(HAL_DIR)/Src/stm32f1xx_hal_adc.c \
-	$(HAL_DIR)/Src/stm32f1xx_hal_adc_ex.c \
-	$(HAL_DIR)/Src/stm32f1xx_hal_cortex.c \
-	$(HAL_DIR)/Src/stm32f1xx_hal_dma.c \
-	$(HAL_DIR)/Src/stm32f1xx_hal_flash.c \
-	$(HAL_DIR)/Src/stm32f1xx_hal_flash_ex.c \
-	$(HAL_DIR)/Src/stm32f1xx_hal_gpio.c \
-	$(HAL_DIR)/Src/stm32f1xx_hal_pwr.c \
-	$(HAL_DIR)/Src/stm32f1xx_hal_rcc.c \
-	$(HAL_DIR)/Src/stm32f1xx_hal_rcc_ex.c \
-	$(HAL_DIR)/Src/stm32f1xx_hal_tim.c \
-	$(HAL_DIR)/Src/stm32f1xx_hal_tim_ex.c \
-	$(HAL_DIR)/Src/stm32f1xx_hal_uart.c
+	$(CMSIS_DEVICE_DIR)/Source/Templates/system_stm32f1xx.c
 
 C_SOURCES := $(APP_SOURCES) $(COMMON_SOURCES)
 ASM_SOURCES := $(CMSIS_DEVICE_DIR)/Source/Templates/gcc/startup_stm32f103x6.s
@@ -54,7 +38,7 @@ OBJECTS := $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o))) \
 vpath %.c $(sort $(dir $(C_SOURCES)))
 vpath %.s $(sort $(dir $(ASM_SOURCES)))
 
-.PHONY: all clean flash
+.PHONY: all clean flash uart
 
 all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).bin
 
@@ -75,7 +59,10 @@ $(BUILD_DIR)/$(TARGET).bin: $(BUILD_DIR)/$(TARGET).elf
 	$(OBJCOPY) -O binary $< $@
 
 flash: all
-	st-flash --flash=32k write $(BUILD_DIR)/$(TARGET).bin 0x08000000
+	st-flash --flash=64k write $(BUILD_DIR)/$(TARGET).bin 0x08000000
+
+uart:
+	picocom -b 115200 /dev/ttyUSB0
 
 clean:
 	rm -rf $(BUILD_DIR)

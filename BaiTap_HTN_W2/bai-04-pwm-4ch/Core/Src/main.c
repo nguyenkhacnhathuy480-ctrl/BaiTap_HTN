@@ -1,64 +1,39 @@
 #include "platform.h"
 
-static TIM_HandleTypeDef htim2;
-
-static void GPIO_Init(void)
-{
-    GPIO_InitTypeDef gpio = {0};
-
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_TIM2_CLK_ENABLE();
-
-    gpio.Pin = GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3;
-    gpio.Mode = GPIO_MODE_AF_PP;
-    gpio.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(GPIOA, &gpio);
-}
-
-static void PWM_Channel_Init(uint32_t channel, uint32_t pulse)
-{
-    TIM_OC_InitTypeDef pwm = {0};
-
-    pwm.OCMode = TIM_OCMODE_PWM1;
-    pwm.Pulse = pulse;
-    pwm.OCPolarity = TIM_OCPOLARITY_HIGH;
-    pwm.OCFastMode = TIM_OCFAST_DISABLE;
-
-    if (HAL_TIM_PWM_ConfigChannel(&htim2, &pwm, channel) != HAL_OK) {
-        Error_Handler();
-    }
-}
-
 static void TIM2_PWM_Init(void)
 {
-    htim2.Instance = TIM2;
-    htim2.Init.Prescaler = 7U;
-    htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim2.Init.Period = 999U;
-    htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-    htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+    uint32_t crl;
 
-    if (HAL_TIM_PWM_Init(&htim2) != HAL_OK) {
-        Error_Handler();
-    }
+    RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
+    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
 
-    PWM_Channel_Init(TIM_CHANNEL_1, 100U);
-    PWM_Channel_Init(TIM_CHANNEL_2, 300U);
-    PWM_Channel_Init(TIM_CHANNEL_3, 500U);
-    PWM_Channel_Init(TIM_CHANNEL_4, 700U);
+    crl = GPIOA->CRL;
+    crl &= ~0xFFFFU;
+    crl |= 0xBBBBU; /* PA0..PA3: AF push-pull 50 MHz. */
+    GPIOA->CRL = crl;
 
-    if ((HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1) != HAL_OK) ||
-        (HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2) != HAL_OK) ||
-        (HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3) != HAL_OK) ||
-        (HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4) != HAL_OK)) {
-        Error_Handler();
-    }
+    TIM2->PSC = 7U;
+    TIM2->ARR = 999U; /* 8 MHz / 8 / 1000 = 1 kHz. */
+    TIM2->CCR1 = 100U;
+    TIM2->CCR2 = 300U;
+    TIM2->CCR3 = 500U;
+    TIM2->CCR4 = 700U;
+
+    TIM2->CCMR1 = TIM_CCMR1_OC1PE | (6U << TIM_CCMR1_OC1M_Pos) |
+                   TIM_CCMR1_OC2PE | (6U << TIM_CCMR1_OC2M_Pos);
+    TIM2->CCMR2 = TIM_CCMR2_OC3PE | (6U << TIM_CCMR2_OC3M_Pos) |
+                   TIM_CCMR2_OC4PE | (6U << TIM_CCMR2_OC4M_Pos);
+    TIM2->CCER = TIM_CCER_CC1E | TIM_CCER_CC2E |
+                 TIM_CCER_CC3E | TIM_CCER_CC4E;
+
+    TIM2->CR1 = TIM_CR1_ARPE;
+    TIM2->EGR = TIM_EGR_UG;
+    TIM2->CR1 |= TIM_CR1_CEN;
 }
 
 int main(void)
 {
     Platform_Init();
-    GPIO_Init();
     TIM2_PWM_Init();
 
     while (1) {

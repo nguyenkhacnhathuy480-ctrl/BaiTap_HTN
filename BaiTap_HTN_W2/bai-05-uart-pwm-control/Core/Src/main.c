@@ -1,114 +1,27 @@
 #include "platform.h"
 
-#include <stdint.h>
-
 #define COMMAND_BUFFER_SIZE 32U
 
-static TIM_HandleTypeDef htim2;
-static UART_HandleTypeDef huart1;
-
-static volatile uint8_t received_byte;
 static volatile char command_buffer[COMMAND_BUFFER_SIZE];
 static volatile uint32_t command_length;
 static volatile uint32_t command_ready;
-
 static uint32_t led_enabled;
 static uint32_t pwm_percent = 50U;
 
-static void GPIO_Init(void)
-{
-    GPIO_InitTypeDef gpio = {0};
-
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_TIM2_CLK_ENABLE();
-    __HAL_RCC_USART1_CLK_ENABLE();
-
-    gpio.Pin = GPIO_PIN_0 | GPIO_PIN_9;
-    gpio.Mode = GPIO_MODE_AF_PP;
-    gpio.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(GPIOA, &gpio);
-
-    gpio.Pin = GPIO_PIN_10;
-    gpio.Mode = GPIO_MODE_INPUT;
-    gpio.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOA, &gpio);
-}
-
 static void TIM2_PWM_Init(void)
 {
-    TIM_OC_InitTypeDef pwm = {0};
+    RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
+    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+    GPIOA->CRL = (GPIOA->CRL & ~0xFU) | 0xBU;
 
-    htim2.Instance = TIM2;
-    htim2.Init.Prescaler = 7U;
-    htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim2.Init.Period = 999U;
-    htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-    htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-
-    if (HAL_TIM_PWM_Init(&htim2) != HAL_OK) {
-        Error_Handler();
-    }
-
-    pwm.OCMode = TIM_OCMODE_PWM1;
-    pwm.Pulse = 0U;
-    pwm.OCPolarity = TIM_OCPOLARITY_HIGH;
-    pwm.OCFastMode = TIM_OCFAST_DISABLE;
-
-    if ((HAL_TIM_PWM_ConfigChannel(&htim2, &pwm, TIM_CHANNEL_1) != HAL_OK) ||
-        (HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1) != HAL_OK)) {
-        Error_Handler();
-    }
-}
-
-static void UART1_Init(void)
-{
-    huart1.Instance = USART1;
-    huart1.Init.BaudRate = 115200U;
-    huart1.Init.WordLength = UART_WORDLENGTH_8B;
-    huart1.Init.StopBits = UART_STOPBITS_1;
-    huart1.Init.Parity = UART_PARITY_NONE;
-    huart1.Init.Mode = UART_MODE_TX_RX;
-    huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-
-    if (HAL_UART_Init(&huart1) != HAL_OK) {
-        Error_Handler();
-    }
-
-    HAL_NVIC_SetPriority(USART1_IRQn, 1U, 0U);
-    HAL_NVIC_EnableIRQ(USART1_IRQn);
-
-    if (HAL_UART_Receive_IT(&huart1, (uint8_t *)&received_byte, 1U) != HAL_OK) {
-        Error_Handler();
-    }
-}
-
-static void UART_Write(const char *text)
-{
-    const char *end = text;
-
-    while (*end != '\0') {
-        ++end;
-    }
-
-    (void)HAL_UART_Transmit(&huart1, (uint8_t *)text,
-                            (uint16_t)(end - text), HAL_MAX_DELAY);
-}
-
-static void UART_WriteU32(uint32_t value)
-{
-    char digits[10];
-    uint32_t count = 0U;
-
-    do {
-        digits[count++] = (char)('0' + (value % 10U));
-        value /= 10U;
-    } while (value != 0U);
-
-    while (count != 0U) {
-        uint8_t digit = (uint8_t)digits[--count];
-        (void)HAL_UART_Transmit(&huart1, &digit, 1U, HAL_MAX_DELAY);
-    }
+    TIM2->PSC = 7U;
+    TIM2->ARR = 999U;
+    TIM2->CCR1 = 0U;
+    TIM2->CCMR1 = TIM_CCMR1_OC1PE | (6U << TIM_CCMR1_OC1M_Pos);
+    TIM2->CCER = TIM_CCER_CC1E;
+    TIM2->CR1 = TIM_CR1_ARPE;
+    TIM2->EGR = TIM_EGR_UG;
+    TIM2->CR1 |= TIM_CR1_CEN;
 }
 
 static char ToUpper(char value)
@@ -139,38 +52,33 @@ static uint32_t ParsePWM(const char *text, uint32_t *result)
         (ToUpper(text[2]) != 'M') || (text[3] != ':')) {
         return 0U;
     }
-
     while ((text[index] >= '0') && (text[index] <= '9')) {
         has_digit = 1U;
         value = (value * 10U) + (uint32_t)(text[index] - '0');
         ++index;
     }
-
     if (text[index] == '%') {
         ++index;
     }
-
     if ((has_digit == 0U) || (text[index] != '\0') || (value > 100U)) {
         return 0U;
     }
-
     *result = value;
     return 1U;
 }
 
 static void ApplyPWM(void)
 {
-    uint32_t pulse = (led_enabled != 0U) ? (pwm_percent * 10U) : 0U;
-    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, pulse);
+    TIM2->CCR1 = (led_enabled != 0U) ? (pwm_percent * 10U) : 0U;
 }
 
 static void SendStatus(void)
 {
-    UART_Write("STATUS:");
-    UART_Write((led_enabled != 0U) ? "ON" : "OFF");
-    UART_Write(" PWM:");
-    UART_WriteU32(pwm_percent);
-    UART_Write("%\r\n");
+    UART1_WriteString("STATUS:");
+    UART1_WriteString((led_enabled != 0U) ? "ON" : "OFF");
+    UART1_WriteString(" PWM:");
+    UART1_WriteU32(pwm_percent);
+    UART1_WriteString("%\r\n");
 }
 
 static void ProcessCommand(const char *command)
@@ -180,59 +88,77 @@ static void ProcessCommand(const char *command)
     if (StringEqualsIgnoreCase(command, "ON") != 0U) {
         led_enabled = 1U;
         ApplyPWM();
-        UART_Write("OK ON\r\n");
+        UART1_WriteString("OK ON\r\n");
     } else if (StringEqualsIgnoreCase(command, "OFF") != 0U) {
         led_enabled = 0U;
         ApplyPWM();
-        UART_Write("OK OFF\r\n");
+        UART1_WriteString("OK OFF\r\n");
     } else if (StringEqualsIgnoreCase(command, "STATUS") != 0U) {
         SendStatus();
     } else if (ParsePWM(command, &new_percent) != 0U) {
         pwm_percent = new_percent;
         ApplyPWM();
-        UART_Write("OK PWM:");
-        UART_WriteU32(pwm_percent);
-        UART_Write("%\r\n");
+        UART1_WriteString("OK PWM:");
+        UART1_WriteU32(pwm_percent);
+        UART1_WriteString("%\r\n");
     } else {
-        UART_Write("ERROR: LENH KHONG HOP LE\r\n");
+        UART1_WriteString("ERROR: LENH KHONG HOP LE\r\n");
     }
 }
 
 void USART1_IRQHandler(void)
 {
-    HAL_UART_IRQHandler(&huart1);
-}
+    const uint32_t status = USART1->SR;
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *uart)
-{
-    if (uart->Instance == USART1) {
+    if ((status & USART_SR_RXNE) != 0U) {
+        const uint8_t received = (uint8_t)USART1->DR;
+
         if (command_ready == 0U) {
-            if (received_byte == (uint8_t)'!') {
+            if (received == (uint8_t)'!') {
                 command_buffer[command_length] = '\0';
                 command_ready = 1U;
+            } else if ((received == (uint8_t)'\r') ||
+                       (received == (uint8_t)'\n')) {
+                /* Ignore terminal line endings. The command delimiter is '!'. */
             } else if (command_length < (COMMAND_BUFFER_SIZE - 1U)) {
-                command_buffer[command_length++] = (char)received_byte;
+                command_buffer[command_length++] = (char)received;
+            } else {
+                command_length = 0U;
             }
         }
-
-        (void)HAL_UART_Receive_IT(&huart1, (uint8_t *)&received_byte, 1U);
+    } else if ((status & (USART_SR_ORE | USART_SR_NE | USART_SR_FE)) != 0U) {
+        (void)USART1->DR;
     }
 }
 
 int main(void)
 {
     Platform_Init();
-    GPIO_Init();
     TIM2_PWM_Init();
-    UART1_Init();
+    UART1_Init(115200U);
 
-    UART_Write("Lenh: ON! OFF! PWM:0..100%! STATUS!\r\n");
+    NVIC_SetPriority(USART1_IRQn, 1U);
+    NVIC_EnableIRQ(USART1_IRQn);
+    USART1->CR1 |= USART_CR1_RXNEIE;
+    UART1_WriteString("Lenh: ON! OFF! PWM:0..100%! STATUS!\r\n");
 
     while (1) {
         if (command_ready != 0U) {
-            ProcessCommand((const char *)command_buffer);
+            char local_command[COMMAND_BUFFER_SIZE];
+            uint32_t index = 0U;
+
+            __disable_irq();
+            while (index <= command_length) {
+                local_command[index] = command_buffer[index];
+                ++index;
+            }
             command_length = 0U;
             command_ready = 0U;
+            __enable_irq();
+
+            ProcessCommand(local_command);
+        } else {
+            __WFI();
         }
     }
 }
