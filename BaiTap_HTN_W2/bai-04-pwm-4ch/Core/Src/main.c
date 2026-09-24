@@ -1,4 +1,21 @@
-#include "platform.h"
+#include "stm32f1xx.h"
+
+#include <stdint.h>
+
+#define SYSTEM_CLOCK_HZ 8000000U
+
+static void Clock_Init(void)
+{
+    RCC->CR |= RCC_CR_HSION;
+    while ((RCC->CR & RCC_CR_HSIRDY) == 0U) {
+    }
+    RCC->CFGR &= ~(RCC_CFGR_SW | RCC_CFGR_HPRE |
+                   RCC_CFGR_PPRE1 | RCC_CFGR_PPRE2);
+    RCC->CFGR |= RCC_CFGR_SW_HSI;
+    while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_HSI) {
+    }
+    SystemCoreClock = SYSTEM_CLOCK_HZ;
+}
 
 static void TIM2_PWM_Init(void)
 {
@@ -9,11 +26,11 @@ static void TIM2_PWM_Init(void)
 
     crl = GPIOA->CRL;
     crl &= ~0xFFFFU;
-    crl |= 0xBBBBU; /* PA0..PA3: AF push-pull 50 MHz. */
+    crl |= 0xBBBBU; /* PA0..PA3: alternate-function push-pull. */
     GPIOA->CRL = crl;
 
     TIM2->PSC = 7U;
-    TIM2->ARR = 999U; /* 8 MHz / 8 / 1000 = 1 kHz. */
+    TIM2->ARR = 999U; /* 8 MHz / (7 + 1) / (999 + 1) = 1 kHz. */
     TIM2->CCR1 = 100U;
     TIM2->CCR2 = 300U;
     TIM2->CCR3 = 500U;
@@ -25,7 +42,6 @@ static void TIM2_PWM_Init(void)
                    TIM_CCMR2_OC4PE | (6U << TIM_CCMR2_OC4M_Pos);
     TIM2->CCER = TIM_CCER_CC1E | TIM_CCER_CC2E |
                  TIM_CCER_CC3E | TIM_CCER_CC4E;
-
     TIM2->CR1 = TIM_CR1_ARPE;
     TIM2->EGR = TIM_EGR_UG;
     TIM2->CR1 |= TIM_CR1_CEN;
@@ -33,7 +49,7 @@ static void TIM2_PWM_Init(void)
 
 int main(void)
 {
-    Platform_Init();
+    Clock_Init();
     TIM2_PWM_Init();
 
     while (1) {

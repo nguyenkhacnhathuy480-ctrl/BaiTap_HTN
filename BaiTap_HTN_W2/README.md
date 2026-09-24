@@ -18,7 +18,8 @@ Dự án triển khai đủ 5 bài Week 02 cho STM32F103 bằng truy cập thanh
 - CMSIS chỉ cung cấp tên thanh ghi, bit mask, vector ngắt và startup/linker.
 - Build/nạp trên Linux bằng ARM GNU Toolchain, GNU Make và `stlink-tools`.
 - Hệ thống chạy HSI 8 MHz để không phụ thuộc thạch anh ngoài.
-- Mỗi bài có `main.c` riêng; phần clock, SysTick và UART cơ bản dùng chung trong `Common/`.
+- Mỗi bài là một project độc lập: có `main.c` và `Makefile` riêng, không gọi mã nguồn của bài khác và không phụ thuộc thư mục `Common/`.
+- Các hàm clock, UART, SysTick, ADC hoặc PWM cần cho bài nào được đặt ngay trong `main.c` của bài đó để dễ đọc và trình bày.
 
 Board STM32F103C8 vẫn chạy được firmware này. Dự án dùng cấu hình CMSIS
 `STM32F103x6` và linker 32 KiB sẵn có trong repo; toàn bộ chương trình đều nhỏ
@@ -28,17 +29,27 @@ hơn giới hạn đó nên cũng tương thích với vùng nhớ lớn hơn c�
 
 ```text
 BaiTap_HTN_W2/
-├── Common/
-│   ├── Inc/platform.h
-│   ├── Src/platform.c
-│   └── Makefile.common
 ├── Drivers/CMSIS/
 ├── bai-01-uart-buffer/
+│   ├── Core/Src/main.c
+│   └── Makefile
 ├── bai-02-systick-leds/
+│   ├── Core/Src/main.c
+│   └── Makefile
 ├── bai-03-adc-uart/
+│   ├── Core/Src/main.c
+│   └── Makefile
 ├── bai-04-pwm-4ch/
+│   ├── Core/Src/main.c
+│   └── Makefile
 └── bai-05-uart-pwm-control/
+    ├── Core/Src/main.c
+    └── Makefile
 ```
+
+`Drivers/CMSIS/` chỉ là bộ header/startup định nghĩa phần cứng STM32, tương tự
+phần nền của toolchain. Nó không chứa logic dùng chung giữa năm bài. Vì mỗi
+Makefile tự mô tả đầy đủ quy trình build, có thể mở và học từng bài riêng biệt.
 
 ## Build, nạp và UART
 

@@ -1,5 +1,8 @@
-#include "platform.h"
+#include "stm32f1xx.h"
 
+#include <stdint.h>
+
+#define SYSTEM_CLOCK_HZ    8000000U
 #define COMMAND_BUFFER_SIZE 32U
 
 static volatile char command_buffer[COMMAND_BUFFER_SIZE];
@@ -7,6 +10,61 @@ static volatile uint32_t command_length;
 static volatile uint32_t command_ready;
 static uint32_t led_enabled;
 static uint32_t pwm_percent = 50U;
+
+static void Clock_Init(void)
+{
+    RCC->CR |= RCC_CR_HSION;
+    while ((RCC->CR & RCC_CR_HSIRDY) == 0U) {
+    }
+    RCC->CFGR &= ~(RCC_CFGR_SW | RCC_CFGR_HPRE |
+                   RCC_CFGR_PPRE1 | RCC_CFGR_PPRE2);
+    RCC->CFGR |= RCC_CFGR_SW_HSI;
+    while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_HSI) {
+    }
+    SystemCoreClock = SYSTEM_CLOCK_HZ;
+}
+
+static void UART1_Init(uint32_t baud_rate)
+{
+    uint32_t crh;
+
+    RCC->APB2ENR |= RCC_APB2ENR_IOPAEN | RCC_APB2ENR_USART1EN;
+    crh = GPIOA->CRH;
+    crh &= ~((0xFU << 4U) | (0xFU << 8U));
+    crh |= (0xBU << 4U) | (0x4U << 8U);
+    GPIOA->CRH = crh;
+
+    USART1->BRR = (SYSTEM_CLOCK_HZ + (baud_rate / 2U)) / baud_rate;
+    USART1->CR1 = USART_CR1_UE | USART_CR1_TE | USART_CR1_RE;
+}
+
+static void UART1_WriteByte(uint8_t value)
+{
+    while ((USART1->SR & USART_SR_TXE) == 0U) {
+    }
+    USART1->DR = value;
+}
+
+static void UART1_WriteString(const char *text)
+{
+    while (*text != '\0') {
+        UART1_WriteByte((uint8_t)*text++);
+    }
+}
+
+static void UART1_WriteU32(uint32_t value)
+{
+    char digits[10];
+    uint32_t count = 0U;
+
+    do {
+        digits[count++] = (char)('0' + (value % 10U));
+        value /= 10U;
+    } while (value != 0U);
+    while (count != 0U) {
+        UART1_WriteByte((uint8_t)digits[--count]);
+    }
+}
 
 static void TIM2_PWM_Init(void)
 {
@@ -119,7 +177,7 @@ void USART1_IRQHandler(void)
                 command_ready = 1U;
             } else if ((received == (uint8_t)'\r') ||
                        (received == (uint8_t)'\n')) {
-                /* Ignore terminal line endings. The command delimiter is '!'. */
+                /* Ignore terminal line endings. */
             } else if (command_length < (COMMAND_BUFFER_SIZE - 1U)) {
                 command_buffer[command_length++] = (char)received;
             } else {
@@ -133,7 +191,7 @@ void USART1_IRQHandler(void)
 
 int main(void)
 {
-    Platform_Init();
+    Clock_Init();
     TIM2_PWM_Init();
     UART1_Init(115200U);
 
@@ -155,7 +213,6 @@ int main(void)
             command_length = 0U;
             command_ready = 0U;
             __enable_irq();
-
             ProcessCommand(local_command);
         } else {
             __WFI();
