@@ -3,8 +3,8 @@
 **
 **  File        : STM32F103C8_FLASH.ld
 **
-**  Abstract    : Linker script for STM32F103xB Device with
-**                128KByte FLASH, 20KByte RAM
+**  Abstract    : Linker script for STM32F103C8T6 with
+**                64KByte FLASH, 20KByte RAM
 **
 **                Set heap size, stack size and stack location according
 **                to application requirements.
