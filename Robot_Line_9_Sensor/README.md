@@ -5,8 +5,8 @@ line so va driver TB6612FNG. Ma duoc tach theo vai tro de thay doi chan noi,
 PID hoac driver ma khong lam roi vong dieu khien.
 
 Project co hai bien the: bare-metal de kiem tra tung ngoai vi va FreeRTOS de
-chay cac task doc cam bien, dieu khien motor va LED trang thai. Hai bien the
-dung chung driver cam bien, motor va boi canh phan cung.
+chay cac task doc cam bien, tinh PID, dieu khien motor va LED trang thai. Hai
+bien the dung chung driver cam bien, motor va boi canh phan cung.
 
 ## Cau truc
 
@@ -26,7 +26,9 @@ dung chung driver cam bien, motor va boi canh phan cung.
     │       └── line_follower.c   # PID va xu ly mat line
     ├── FreeRTOS/
     │   ├── Core/Inc/FreeRTOSConfig.h
+    │   ├── Core/Inc/robot_tasks.h
     │   ├── Core/Src/main_freertos.c
+    │   ├── Core/Src/robot_tasks.c
     │   └── Makefile
     ├── Middleware/FreeRTOS/
     ├── Startup/
@@ -90,10 +92,14 @@ di chuyen hoac sao chep sang noi khac ma van build duoc.
 
 ## Build va nap ban FreeRTOS
 
-Ban FreeRTOS co ba task:
+Ban FreeRTOS co ba task chinh va mot task trang thai:
 
-- SensorTask: doc 9 mat moi 1 ms va gui vi tri line qua queue.
-- ControlTask: nhan mau, chay PID va cap nhat hai kenh PWM.
+- SensorTask (Nguyen Trung Dan): doc 9 mat moi 1 ms va ghi de phep do moi nhat
+  vao measurement_queue dai 1.
+- PIDTask (Nguyen Khac Nhat Huy): nhan LineMeasurement_t, chay PID va ghi lenh
+  left/right vao motor_queue dai 1.
+- MotorTask (Hoang Hai Dang): nhan MotorCommand_t va cap nhat chieu quay, PWM
+  TIM1 cho TB6612FNG.
 - StatusTask: dao LED PC13 moi 250 ms de bao scheduler dang chay.
 
     cd ~/projects/BaiTap_HTN/Robot_Line_9_Sensor/FreeRTOS
@@ -101,8 +107,18 @@ Ban FreeRTOS co ba task:
     make
     make flash
 
-FreeRTOSConfig.h dat tick 1 kHz, heap 6 KB, uu tien Control cao hon Sensor
-va dung port GCC ARM Cortex-M3.
+FreeRTOSConfig.h dat tick 1 kHz, heap 6 KB, preemptive scheduling. PIDTask co
+uu tien 4, SensorTask va MotorTask uu tien 3, StatusTask uu tien 1; dung port
+GCC ARM Cortex-M3. Queue dai 1 duoc dung de bo qua mau cu khi task xu ly
+cham hon chu ky lay mau.
+
+## Phan cong thanh vien
+
+| Thanh vien | Phan viec |
+|---|---|
+| Nguyen Trung Dan | Cam bien line, doc GPIO, tinh vi tri va xu ly mat line |
+| Nguyen Khac Nhat Huy | FreeRTOS, queue, PID va tich hop he thong |
+| Hoang Hai Dang | Driver TB6612FNG, TIM1 PWM, chieu quay va kiem thu dong co |
 
 ## Dieu chinh khi doi day
 

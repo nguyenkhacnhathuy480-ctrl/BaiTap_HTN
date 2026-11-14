@@ -32,6 +32,7 @@ LDFLAGS := $(CPU_FLAGS) -T../Startup/STM32F103C8_FLASH.ld \
 
 C_SOURCES := \
 	Core/Src/main_freertos.c \
+	Core/Src/robot_tasks.c \
 	Core/Src/platform_freertos.c \
 	../Core/Src/line_sensor.c \
 	../Core/Src/motor_tb6612.c \
