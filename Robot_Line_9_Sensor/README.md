@@ -1,127 +1,70 @@
-# Robot do line 9 mat — STM32F103C8T6 va TB6612FNG
+# RobotLine Keil Final
 
-Firmware bare-metal dung thanh ghi truc tiep cho robot hai dong co, 9 cam bien
-line so va driver TB6612FNG. Ma duoc tach theo vai tro de thay doi chan noi,
-PID hoac driver ma khong lam roi vong dieu khien.
+Project độc lập cho STM32F103C8T6, FreeRTOS, TB6612FNG và 9 đầu dò analog
+(8 mắt PA0–PA7 dùng điều khiển; PB0 chỉ đọc chẩn đoán).
+Tầng ứng dụng và điều khiển được viết mới. BSP, startup, driver phần cứng,
+CMSIS và FreeRTOS được giữ lại để dùng đúng mạch hiện tại.
 
-Project co hai bien the: bare-metal de kiem tra tung ngoai vi va FreeRTOS de
-chay cac task doc cam bien, tinh PID, dieu khien motor va LED trang thai. Hai
-bien the dung chung driver cam bien, motor va boi canh phan cung.
+## Mở trong Keil
 
-## Cau truc
+Mở `MDK-ARM/RobotLine.uvprojx` bằng Keil µVision/ARM Compiler 5.06.
+Chỉ có một project vận hành, không kèm target tự chạy để thử motor.
+**Config → robot_config.h** nằm ngay trong cây Project.
+Rebuild tạo `MDK-ARM/Objects/RobotLine.hex`. Build không tự nạp.
+Chạy `Tools/Test.ps1` để kiểm thử mô-đun trên Windows.
 
-    Robot_Line_9_Sensor/
-    ├── Core/
-    │   ├── Inc/
-    │   │   ├── board_config.h    # Chan noi va hang so can chinh
-    │   │   ├── line_sensor.h
-    │   │   ├── motor_tb6612.h
-    │   │   ├── line_follower.h
-    │   │   └── platform.h
-    │   └── Src/
-    │       ├── main.c            # Vong dieu khien 1 ms
-    │       ├── platform.c        # Clock 72 MHz, SysTick, LED trang thai
-    │       ├── line_sensor.c     # Doc va tinh vi tri tu 9 mat
-    │       ├── motor_tb6612.c    # PWM va chieu quay hai dong co
-    │       └── line_follower.c   # PID va xu ly mat line
-    ├── FreeRTOS/
-    │   ├── Core/Inc/FreeRTOSConfig.h
-    │   ├── Core/Inc/robot_tasks.h
-    │   ├── Core/Src/main_freertos.c
-    │   ├── Core/Src/robot_tasks.c
-    │   └── Makefile
-    ├── Middleware/FreeRTOS/
-    ├── Startup/
-    └── Makefile
+## Các phần chính
 
-## So do chan mac dinh
+- **Application**: `main.c` khởi tạo; `robot.c` đọc ADC, nút và điều khiển
+  motor mỗi 5 ms trong cùng task; `monitor.c` quản lý OLED, UART và LED.
+- **Control**: `tracker.c` chuẩn hóa từng mắt và chọn cụm vạch liền nhau;
+  `drive.c` quản lý trạng thái, PWM, tốc độ và giới hạn lái.
+- **Config**: chân phần cứng, tham số điều khiển, thứ tự mắt, preset và RTOS.
+- **Board / Drivers / Startup / FreeRTOS**: tầng thấp và thư viện nền.
 
-| Chuc nang | STM32F103C8T6 | Ket noi |
-|---|---|---|
-| Cam bien S0…S7 | PA0…PA7 | OUT cua 8 mat tu trai sang phai |
-| Cam bien S8 | PB0 | OUT cua mat ngoai cung ben phai |
-| PWMA | PA8 / TIM1_CH1 | TB6612 PWMA |
-| PWMB | PA9 / TIM1_CH2 | TB6612 PWMB |
-| AIN1, AIN2 | PB12, PB13 | TB6612 AIN1, AIN2 |
-| BIN1, BIN2 | PB14, PB15 | TB6612 BIN1, BIN2 |
-| STBY | PB11 | TB6612 STBY |
-| LED trang thai | PC13 | LED tich hop Blue Pill |
+## Vận hành và tuning
 
-Noi chung GND giua STM32, mach cam bien, TB6612 va nguon dong co. VCC logic
-cua TB6612 noi 3.3 V. VM noi nguon dong co theo dien ap motor. Khong cap nguon
-motor tu chan 3.3 V cua Blue Pill.
+Giữ độ cao cảm biến, nền/vạch và nguồn như lúc lấy mẫu. Preset trắng–đen
+nằm trong `sensor_calibration.h`; nút không thể xóa preset. PA4 là tâm.
+Bật nguồn: motor không tự chạy. Đặt xe gần tâm vạch hẹp, đợi OLED hiện
+READY, nhấn PB5. PB5 dừng; PB8/PB9 tăng/giảm 2,5 điểm phần trăm PWM;
+giữ nút không lặp, nhấn đồng thời PB8+PB9 để dừng. Có còi khi nhận nút.
 
-Chan OUT cua moi cam bien phai co muc cao toi da 3.3 V. Neu mach cam bien dang
-cap 5 V va OUT cung la 5 V, dung mach chia ap hoac level shifter truoc khi noi
-vao STM32.
+Khi vạch mất ngắn, xe báo GAP, giữ tỷ lệ PWM gần nhất ở tối đa 28% trong
+35 ms. Hai khung hợp lệ liên tiếp trước hạn cho phép bám lại và tăng tốc
+dần; hết hạn báo LOST và dừng. Vạch rộng, mơ hồ hoặc lỗi vẫn dừng ngay.
+Nếu PA7 hoặc PA0 nhận vạch ở cùng một mép trong ít nhất hai khung liên tiếp
+ngay trước khi mất vạch, xe thử ôm góc vuông về phía đó. Bốn khung liên tiếp
+cùng mép cho phép rẽ sớm khi vẫn thấy vạch. Bánh trong dừng, bánh ngoài chạy
+tối đa 36% PWM. OLED báo 90 LEFT hoặc 90 RIGHT. Vạch về
+tâm ổn định thì tăng dần tốc trở lại; quá 450 ms báo 90 TIMEOUT và dừng.
+Vùng đen rộng, vạch mơ hồ, lỗi ADC hoặc lỗi chu kỳ vẫn cắt lệnh ngay.
+Một dãy mắt không phân biệt chắc chắn góc vuông với xe văng khỏi vạch;
+nhánh khôi phục này có giới hạn và không chọn hướng ở giao lộ.
+Cắt PWM không phanh hết quán tính. Giữ công tắc nguồn trong tầm tay.
 
-Mac dinh cam bien active-low: gap vach den se xuat muc 0. Neu mach cam bien
-xuat muc 1 khi gap vach den, doi LINE_SENSOR_ACTIVE_LOW tu 1U thanh 0U trong
-Core/Inc/board_config.h.
+Tuning trong `Config/robot_config.h`: CTRL_BASE_PWM=520 (52%), PB8 có thể
+tăng dần tới CTRL_MAX_PWM=620 (62%). CTRL_CORNER_PWM và
+CTRL_CORNER_TIMEOUT_MS chỉnh riêng cho góc vuông;
+CTRL_KP điều chỉnh lực trả lái; CTRL_KD giảm dao động, có bộ lọc;
+CTRL_TRIM_DIV là số chia của bù lệch (số nhỏ hơn cho bù mạnh hơn).
+Chỉ chỉnh một tham số mỗi lần; không cần hiệu chuẩn khi chỉnh hệ số.
+Mặc định không đảo bánh: xe rẽ bằng cách giảm duty bánh trong.
+Khi độ lệch tăng từ `CTRL_CURVE_START` tới `CTRL_CURVE_FULL`, gain P
+tăng dần tới `CTRL_CURVE_KP` và nền giảm thêm theo
+`CTRL_CURVE_SLOW_EXTRA`. Sàn tương đối `CTRL_CURVE_PWM_FLOOR` được tính
+trước khi áp trần `CTRL_CURVE_APPROACH_PWM`; trần giảm dần về 36% khi đạt
+độ lệch CTRL_CURVE_FULL để tốc độ thẳng không kéo qua cua gắt.
+Xe suy ra nhu cầu rẽ từ độ lệch mắt, không đo bán kính cua.
 
-## Thuat toan
+UART 115200 8N1, RX adapter→PB10 và TX→PB11, GND chung, logic 3,3 V.
+Không nối VCC adapter khi kit dùng pin riêng. Lệnh `a` đọc trạng thái,
+`x` dừng, `?` trợ giúp. Không hỗ trợ Start từ UART.
+`E>0` nghĩa là vạch ở bên phải xe; `L/R` là PWM theo phần nghìn.
+Q=0 hợp lệ, 1 không thấy vạch, 2 vùng rộng, 3 hai cụm, 4 preset sai.
 
-Chuong trinh doc 9 cam bien moi 1 ms. Cac mat nhan trong so tu -4000 den
-+4000; trung binh trong so cua nhung mat dang thay vach la sai so vi tri.
-PID tao hieu chinh cho hai motor:
-
-    left  = base_speed + correction
-    right = base_speed - correction
-
-Khi ca 9 mat khong thay line, xe quay ve phia ma no nhin thay line lan cuoi.
-Thong so chinh xe nam trong Core/Inc/board_config.h:
-
-    LINE_PID_KP            170
-    LINE_PID_KI            2
-    LINE_PID_KD            280
-    LINE_BASE_SPEED        520
-    LINE_LOST_TURN_SPEED   320
-
-Bat dau voi toc do thap, tang LINE_BASE_SPEED, sau do chinh KP, KD va cuoi
-cung moi tang rat it KI.
-
-## Build va nap tren Ubuntu
-
-    cd ~/projects/BaiTap_HTN/Robot_Line_9_Sensor
-    make clean
-    make
-    make flash
-
-CMSIS phu hop STM32F103C8T6 da nam trong Drivers/CMSIS, vi vay project co the
-di chuyen hoac sao chep sang noi khac ma van build duoc.
-
-## Build va nap ban FreeRTOS
-
-Ban FreeRTOS co ba task chinh va mot task trang thai:
-
-- SensorTask (Nguyen Trung Dan): doc 9 mat moi 1 ms va ghi de phep do moi nhat
-  vao measurement_queue dai 1.
-- PIDTask (Nguyen Khac Nhat Huy): nhan LineMeasurement_t, chay PID va ghi lenh
-  left/right vao motor_queue dai 1.
-- MotorTask (Hoang Hai Dang): nhan MotorCommand_t va cap nhat chieu quay, PWM
-  TIM1 cho TB6612FNG.
-- StatusTask: dao LED PC13 moi 250 ms de bao scheduler dang chay.
-
-    cd ~/projects/BaiTap_HTN/Robot_Line_9_Sensor/FreeRTOS
-    make clean
-    make
-    make flash
-
-FreeRTOSConfig.h dat tick 1 kHz, heap 6 KB, preemptive scheduling. PIDTask co
-uu tien 4, SensorTask va MotorTask uu tien 3, StatusTask uu tien 1; dung port
-GCC ARM Cortex-M3. Queue dai 1 duoc dung de bo qua mau cu khi task xu ly
-cham hon chu ky lay mau.
-
-## Phan cong thanh vien
-
-| Thanh vien | Phan viec |
-|---|---|
-| Nguyen Trung Dan | Cam bien line, doc GPIO, tinh vi tri va xu ly mat line |
-| Nguyen Khac Nhat Huy | FreeRTOS, queue, PID va tich hop he thong |
-| Hoang Hai Dang | Driver TB6612FNG, TIM1 PWM, chieu quay va kiem thu dong co |
-
-## Dieu chinh khi doi day
-
-Chi sua Core/Inc/board_config.h khi doi chan cam bien, chan TB6612, chieu
-logic cam bien hoac hang so PID. Neu motor trai/phai chay nguoc chieu mong
-muon, dao hai day motor hoac doi cap AIN/BIN tuong ung trong phan cau hinh.
+Trước khi thử trên sàn, kê hai bánh và kiểm tra vạch bên phải tạo lệnh
+L>R, rồi xác nhận bánh trái vật lý được điều khiển mạnh hơn. Thử ngược lại
+cho bên trái. Nếu không khớp, kiểm tra đấu dây và vị trí các mắt trước khi
+tuning. Chưa có phản hồi RPM hoặc watchdog độc lập; phần mềm không thay
+thế công tắc cắt nguồn. Build/test trên máy không chứng minh xe bám thật.

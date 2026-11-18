@@ -1,7 +1,6 @@
-/build/
-*.elf
-*.bin
-*.map
-*.o
-*.d
-*.lst
+/MDK-ARM/Objects/
+/MDK-ARM/Listings/
+/Tests/build/
+*.uvguix.*
+*.uvoptx
+*.log
